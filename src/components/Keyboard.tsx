@@ -24,6 +24,7 @@ import {
   Command,
   BookOpen,
   Edit3,
+  LayoutGrid,
 } from 'lucide-react';
 import {
   ARABIC_ROWS_NORMAL,
@@ -86,6 +87,9 @@ interface KeyboardProps {
   onTogglePaperFold?: () => void;
   onShortcut?: (shortcutId: string) => void;
   onOpenShortcutsModal?: () => void;
+  onOpenAppsDrawer?: () => void;
+  isUniversalImeEnabled?: boolean;
+  onToggleUniversalIme?: () => void;
 }
 
 export const Keyboard: React.FC<KeyboardProps> = ({
@@ -113,6 +117,9 @@ export const Keyboard: React.FC<KeyboardProps> = ({
   onTogglePaperFold,
   onShortcut,
   onOpenShortcutsModal,
+  onOpenAppsDrawer,
+  isUniversalImeEnabled = true,
+  onToggleUniversalIme,
 }) => {
   const [lang, setLang] = useState<'ar' | 'en'>('ar');
   const [numberFormat, setNumberFormat] = useState<'western' | 'arabic'>('western');
@@ -446,6 +453,42 @@ export const Keyboard: React.FC<KeyboardProps> = ({
           <Smartphone className="w-3 h-3 text-blue-600" />
         </button>
 
+        {/* 4.1 قائمة التطبيقات 📲 */}
+        {onOpenAppsDrawer && (
+          <button
+            id="kb-apps-drawer-btn"
+            onClick={() => {
+              triggerFeedback(true);
+              onOpenAppsDrawer();
+            }}
+            className="flex items-center gap-1 px-2 py-0.5 rounded-md border border-indigo-300 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold shadow-2xs transition-all active:scale-95 text-[11px] shrink-0"
+            title="فتح قائمة التطبيقات ومستندات العمل (واتساب، ملاحظات، وورد، إكسل، تيليجرام، بريد، متصفح)"
+          >
+            <LayoutGrid className="w-3 h-3 text-indigo-600" />
+            <span>التطبيقات</span>
+          </button>
+        )}
+
+        {/* 4.2 لوحة أساسية ⚡ (وضع التوافق كلوحة مفاتيح النظام) */}
+        {onToggleUniversalIme && (
+          <button
+            id="kb-universal-ime-btn"
+            onClick={() => {
+              triggerFeedback(true);
+              onToggleUniversalIme();
+            }}
+            className={`flex items-center gap-1 px-2 py-0.5 rounded-md border font-bold shadow-2xs transition-all active:scale-95 text-[11px] shrink-0 ${
+              isUniversalImeEnabled
+                ? 'bg-emerald-100 border-emerald-400 text-emerald-900'
+                : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'
+            }`}
+            title="وضع التوافق كلوحة مفاتيح الهاتف الأساسية (Universal IME)"
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${isUniversalImeEnabled ? 'bg-emerald-600 animate-pulse' : 'bg-slate-400'}`} />
+            <span>{isUniversalImeEnabled ? 'لوحة أساسية ⚡' : 'لوحة أصلية'}</span>
+          </button>
+        )}
+
         {/* 5. أرقام: ١٢٣ */}
         <button
           id="kb-toggle-digits-btn"
@@ -602,7 +645,7 @@ export const Keyboard: React.FC<KeyboardProps> = ({
                 onKeyPress(item.char);
               }}
               title={item.name}
-              className="min-w-[24px] sm:min-w-[26px] h-6 px-1 bg-white hover:bg-blue-50 hover:text-blue-700 border border-slate-300 rounded text-xs font-bold flex items-center justify-center shadow-2xs active:scale-95 transition-all text-slate-800"
+              className="min-w-[24px] sm:min-w-[28px] h-6 px-1 bg-white hover:bg-blue-50 hover:text-blue-700 border border-slate-300 rounded text-sm font-bold flex items-center justify-center shadow-[0_1px_0_rgba(0,0,0,0.12)] active:shadow-none active:scale-95 transition-all text-slate-900 select-none"
             >
               {item.char}
             </button>
@@ -628,7 +671,7 @@ export const Keyboard: React.FC<KeyboardProps> = ({
                     onMouseLeave={handleBackspaceEnd}
                     onTouchStart={handleBackspaceStart}
                     onTouchEnd={handleBackspaceEnd}
-                    className="flex-none px-1 rounded-md bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 active:bg-rose-200 shadow-2xs flex items-center justify-center gap-0.5 transition-all active:scale-95 min-w-[34px] sm:min-w-[44px] h-full max-h-[38px] min-h-[26px]"
+                    className="flex-none px-1 rounded-md bg-rose-50 border border-rose-300 text-rose-700 hover:bg-rose-100 active:bg-rose-200 shadow-[0_1.5px_0_#fda4af] active:shadow-none active:translate-y-[0.5px] flex items-center justify-center gap-0.5 transition-all active:scale-95 min-w-[34px] sm:min-w-[44px] h-full max-h-[38px] min-h-[26px]"
                     title="حذف (مسح)"
                   >
                     <Delete className="w-4 h-4 stroke-[2]" />
@@ -644,7 +687,7 @@ export const Keyboard: React.FC<KeyboardProps> = ({
                     key={key.code}
                     id="kb-key-enter"
                     onClick={() => handleKeyClick(key)}
-                    className="flex-none px-1.5 rounded-md bg-[#1a73e8] border border-blue-700 text-white hover:bg-blue-700 active:bg-blue-800 shadow-2xs flex items-center justify-center gap-1 transition-all active:scale-95 font-bold min-w-[36px] sm:min-w-[48px] h-full max-h-[38px] min-h-[26px]"
+                    className="flex-none px-1.5 rounded-md bg-[#1a73e8] border border-blue-700 text-white hover:bg-blue-700 active:bg-blue-800 shadow-[0_1.5px_0_#1557b0] active:shadow-none active:translate-y-[0.5px] flex items-center justify-center gap-1 transition-all active:scale-95 font-bold min-w-[36px] sm:min-w-[48px] h-full max-h-[38px] min-h-[26px]"
                     title="إدخال (Enter)"
                   >
                     <CornerDownLeft className="w-4 h-4 stroke-[2.5]" />
@@ -660,7 +703,7 @@ export const Keyboard: React.FC<KeyboardProps> = ({
                     key={key.code}
                     id="kb-key-alt"
                     onClick={() => handleKeyClick(key)}
-                    className={`rounded-md border font-bold text-[10px] sm:text-[11px] shadow-2xs flex items-center justify-center transition-all active:scale-95 min-w-[26px] sm:min-w-[34px] h-full max-h-[38px] min-h-[26px] px-1 ${
+                    className={`rounded-md border font-bold text-[10px] sm:text-[11px] shadow-[0_1.5px_0_rgba(0,0,0,0.2)] active:shadow-none active:translate-y-[0.5px] flex items-center justify-center transition-all active:scale-95 min-w-[26px] sm:min-w-[34px] h-full max-h-[38px] min-h-[26px] px-1 ${
                       isAlt
                         ? 'bg-purple-800 text-white border-purple-900 ring-2 ring-purple-400'
                         : 'bg-[#9333ea] text-white border-purple-700 hover:bg-purple-700'
@@ -678,7 +721,7 @@ export const Keyboard: React.FC<KeyboardProps> = ({
                     key={key.code}
                     id="kb-key-lang-toggle"
                     onClick={() => handleKeyClick(key)}
-                    className="rounded-md border border-emerald-300 bg-[#d1fae5] hover:bg-emerald-200 text-emerald-900 font-bold text-[10px] sm:text-xs shadow-2xs flex items-center justify-center gap-0.5 transition-all active:scale-95 min-w-[32px] sm:min-w-[42px] h-full max-h-[38px] min-h-[26px] px-1"
+                    className="rounded-md border border-emerald-300 bg-[#d1fae5] hover:bg-emerald-200 text-emerald-950 font-bold text-[10px] sm:text-xs shadow-[0_1.5px_0_#6ee7b7] active:shadow-none active:translate-y-[0.5px] flex items-center justify-center gap-0.5 transition-all active:scale-95 min-w-[32px] sm:min-w-[42px] h-full max-h-[38px] min-h-[26px] px-1"
                     title="تغيير لغة الإدخال"
                   >
                     <Globe className="w-3.5 h-3.5 text-emerald-700" />
@@ -694,9 +737,9 @@ export const Keyboard: React.FC<KeyboardProps> = ({
                     key={key.code}
                     id="kb-key-space"
                     onClick={() => handleKeyClick(key)}
-                    className="flex-1 rounded-md bg-white border border-slate-300 hover:bg-slate-50 active:bg-slate-200 text-slate-700 font-medium text-xs sm:text-sm shadow-2xs flex items-center justify-center transition-all active:scale-98 h-full max-h-[38px] min-h-[26px]"
+                    className="flex-1 rounded-md bg-white border border-slate-300 hover:bg-slate-50 active:bg-slate-200 text-slate-800 font-semibold text-xs sm:text-sm shadow-[0_1.5px_0_rgba(0,0,0,0.18)] active:shadow-none active:translate-y-[0.5px] flex items-center justify-center transition-all active:scale-98 h-full max-h-[38px] min-h-[26px]"
                   >
-                    {lang === 'ar' ? 'مسافة (Space)' : 'Space'}
+                    {lang === 'ar' ? 'مسافة • Space' : 'Space'}
                   </button>
                 );
               }
@@ -713,7 +756,7 @@ export const Keyboard: React.FC<KeyboardProps> = ({
                         triggerFeedback(true);
                         onArrowMove('up');
                       }}
-                      className="w-full flex-1 rounded bg-white border border-slate-300 hover:bg-slate-100 flex items-center justify-center text-slate-700 shadow-2xs active:scale-95"
+                      className="w-full flex-1 rounded bg-white border border-slate-300 hover:bg-slate-100 flex items-center justify-center text-slate-800 shadow-[0_1px_0_rgba(0,0,0,0.15)] active:shadow-none active:scale-95"
                       title="سهم لأعلى"
                     >
                       <ArrowUp className="w-2.5 h-2.5" />
@@ -723,7 +766,7 @@ export const Keyboard: React.FC<KeyboardProps> = ({
                         triggerFeedback(true);
                         onArrowMove('down');
                       }}
-                      className="w-full flex-1 rounded bg-white border border-slate-300 hover:bg-slate-100 flex items-center justify-center text-slate-700 shadow-2xs active:scale-95"
+                      className="w-full flex-1 rounded bg-white border border-slate-300 hover:bg-slate-100 flex items-center justify-center text-slate-800 shadow-[0_1px_0_rgba(0,0,0,0.15)] active:shadow-none active:scale-95"
                       title="سهم لأسفل"
                     >
                       <ArrowDown className="w-2.5 h-2.5" />
@@ -741,7 +784,7 @@ export const Keyboard: React.FC<KeyboardProps> = ({
                       triggerFeedback(true);
                       onArrowMove('left');
                     }}
-                    className="rounded-md bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 flex items-center justify-center shadow-2xs active:scale-95 w-5 sm:w-6 h-full max-h-[38px] min-h-[26px]"
+                    className="rounded-md bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 flex items-center justify-center shadow-[0_1.5px_0_rgba(0,0,0,0.15)] active:shadow-none active:scale-95 w-5 sm:w-6 h-full max-h-[38px] min-h-[26px]"
                     title="سهم لليسار"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
@@ -758,7 +801,7 @@ export const Keyboard: React.FC<KeyboardProps> = ({
                       triggerFeedback(true);
                       onArrowMove('right');
                     }}
-                    className="rounded-md bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 flex items-center justify-center shadow-2xs active:scale-95 w-5 sm:w-6 h-full max-h-[38px] min-h-[26px]"
+                    className="rounded-md bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 flex items-center justify-center shadow-[0_1.5px_0_rgba(0,0,0,0.15)] active:shadow-none active:scale-95 w-5 sm:w-6 h-full max-h-[38px] min-h-[26px]"
                     title="سهم لليمين"
                   >
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -772,10 +815,10 @@ export const Keyboard: React.FC<KeyboardProps> = ({
                   <button
                     key={key.code}
                     onClick={() => handleKeyClick(key)}
-                    className={`flex-none rounded-md border font-bold text-[10px] sm:text-xs shadow-2xs flex items-center justify-center transition-all active:scale-95 min-w-[28px] sm:min-w-[36px] h-full max-h-[38px] min-h-[26px] ${
+                    className={`flex-none rounded-md border font-bold text-[10px] sm:text-xs shadow-[0_1.5px_0_rgba(0,0,0,0.18)] active:shadow-none active:translate-y-[0.5px] flex items-center justify-center transition-all active:scale-95 min-w-[28px] sm:min-w-[36px] h-full max-h-[38px] min-h-[26px] ${
                       isShift
                         ? 'bg-blue-100 border-blue-400 text-blue-700 ring-1 ring-blue-300'
-                        : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                        : 'bg-white border-slate-300 text-slate-800 hover:bg-slate-100'
                     }`}
                   >
                     Shift
@@ -789,10 +832,10 @@ export const Keyboard: React.FC<KeyboardProps> = ({
                   <button
                     key={key.code}
                     onClick={() => handleKeyClick(key)}
-                    className={`flex-none rounded-md border font-bold text-[10px] sm:text-xs shadow-2xs flex items-center justify-center transition-all active:scale-95 min-w-[28px] sm:min-w-[36px] h-full max-h-[38px] min-h-[26px] ${
+                    className={`flex-none rounded-md border font-bold text-[10px] sm:text-xs shadow-[0_1.5px_0_rgba(0,0,0,0.18)] active:shadow-none active:translate-y-[0.5px] flex items-center justify-center transition-all active:scale-95 min-w-[28px] sm:min-w-[36px] h-full max-h-[38px] min-h-[26px] ${
                       isCaps
                         ? 'bg-amber-100 border-amber-400 text-amber-800 ring-1 ring-amber-300'
-                        : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                        : 'bg-white border-slate-300 text-slate-800 hover:bg-slate-100'
                     }`}
                   >
                     Caps
@@ -806,7 +849,7 @@ export const Keyboard: React.FC<KeyboardProps> = ({
                   <button
                     key={key.code}
                     onClick={() => handleKeyClick(key)}
-                    className="flex-none rounded-md bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-[10px] sm:text-xs shadow-2xs flex items-center justify-center transition-all active:scale-95 min-w-[24px] sm:min-w-[32px] h-full max-h-[38px] min-h-[26px]"
+                    className="flex-none rounded-md bg-white border border-slate-300 text-slate-800 hover:bg-slate-100 font-bold text-[10px] sm:text-xs shadow-[0_1.5px_0_rgba(0,0,0,0.18)] active:shadow-none active:translate-y-[0.5px] flex items-center justify-center transition-all active:scale-95 min-w-[24px] sm:min-w-[32px] h-full max-h-[38px] min-h-[26px]"
                   >
                     Tab
                   </button>
@@ -820,10 +863,10 @@ export const Keyboard: React.FC<KeyboardProps> = ({
                     key={key.code}
                     id="kb-key-ctrl"
                     onClick={() => handleKeyClick(key)}
-                    className={`rounded-md border font-bold text-[10px] sm:text-xs shadow-2xs flex items-center justify-center transition-all active:scale-95 min-w-[26px] sm:min-w-[34px] h-full max-h-[38px] min-h-[26px] px-1 ${
+                    className={`rounded-md border font-bold text-[10px] sm:text-xs shadow-[0_1.5px_0_rgba(0,0,0,0.18)] active:shadow-none active:translate-y-[0.5px] flex items-center justify-center transition-all active:scale-95 min-w-[26px] sm:min-w-[34px] h-full max-h-[38px] min-h-[26px] px-1 ${
                       isCtrl
                         ? 'bg-blue-600 text-white border-blue-700 ring-2 ring-blue-400 font-extrabold animate-pulse'
-                        : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                        : 'bg-white border-slate-300 text-slate-800 hover:bg-slate-100'
                     }`}
                     title="Control (Ctrl): تفعيل اختصارات Word & Excel"
                   >
@@ -841,7 +884,7 @@ export const Keyboard: React.FC<KeyboardProps> = ({
                 <button
                   key={key.code}
                   onClick={() => handleKeyClick(key)}
-                  className={`flex-1 rounded-md border text-slate-900 shadow-2xs flex flex-col items-center justify-center relative transition-all select-none hover:border-slate-400 active:scale-95 min-w-[18px] sm:min-w-[24px] h-full max-h-[38px] min-h-[26px] px-0.5 ${
+                  className={`flex-1 rounded-md border text-slate-900 shadow-[0_1.5px_0_rgba(0,0,0,0.18)] active:shadow-none active:translate-y-[0.5px] flex flex-col items-center justify-center relative transition-all select-none hover:border-slate-400 active:scale-95 min-w-[18px] sm:min-w-[24px] h-full max-h-[38px] min-h-[26px] px-0.5 ${
                     hasCtrlShortcut
                       ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-300'
                       : hasAltAutoSum
@@ -870,11 +913,11 @@ export const Keyboard: React.FC<KeyboardProps> = ({
 
                   {/* Shift label in corner if available */}
                   {!hasCtrlShortcut && !hasAltAutoSum && lang === 'ar' && key.shiftLabel && (
-                    <span className="absolute top-0.5 right-1 text-[8px] text-slate-400 font-normal leading-none pointer-events-none">
+                    <span className="absolute top-0.5 right-1 text-[8.5px] text-slate-500 font-semibold leading-none pointer-events-none">
                       {key.shiftLabel}
                     </span>
                   )}
-                  <span className="text-[12px] sm:text-sm font-semibold leading-none">
+                  <span className="text-[12.5px] sm:text-sm font-bold text-slate-900 leading-none">
                     {(() => {
                       const baseLabel = lang === 'ar'
                         ? (isShift && key.shiftLabel ? key.shiftLabel : key.label)

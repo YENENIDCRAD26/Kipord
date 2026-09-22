@@ -29,6 +29,10 @@ import {
   Calendar,
   Clock,
   Table,
+  LayoutGrid,
+  Mail,
+  Globe,
+  RotateCw,
 } from 'lucide-react';
 import { KeyboardSettings, FontItem, DocImage, DocTable, TargetAppType, InsertModalTab, ActiveKeyboardType } from '../types';
 
@@ -52,6 +56,9 @@ interface TargetAppViewerProps {
   onOpenColorModal: () => void;
   onExportJpg: () => void;
   onExportPdf: () => void;
+  onOpenAppsDrawer?: () => void;
+  onFocusInput?: (fieldName: string) => void;
+  isUniversalImeEnabled?: boolean;
 }
 
 interface ChatMessage {
@@ -82,10 +89,30 @@ export const TargetAppViewer: React.FC<TargetAppViewerProps> = ({
   onOpenColorModal,
   onExportJpg,
   onExportPdf,
+  onOpenAppsDrawer,
+  onFocusInput,
+  isUniversalImeEnabled = true,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
+
+  const [activeFieldLabel, setActiveFieldLabel] = useState<string>('محرر النصوص');
+
+  const handleFieldFocus = (label: string) => {
+    setActiveFieldLabel(label);
+    if (onFocusInput) {
+      onFocusInput(label);
+    }
+  };
+
+  // Browser state
+  const [browserUrl, setBrowserUrl] = useState<string>('https://google.com/search?q=سامسونج+كيبورد');
+  const [browserSearchQuery, setBrowserSearchQuery] = useState<string>('مستندات العمل والخطوط العربية');
+
+  // Email state
+  const [emailTo, setEmailTo] = useState<string>('manager@company.com');
+  const [emailSubject, setEmailSubject] = useState<string>('تقرير العمل والمستندات المنجزة');
 
   // Chat messages simulation for WhatsApp / Telegram / Messages
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -144,8 +171,21 @@ export const TargetAppViewer: React.FC<TargetAppViewerProps> = ({
   return (
     <div className="flex-1 flex flex-col bg-slate-100 overflow-hidden relative" dir="rtl">
       {/* 1. TARGET APP SWITCHER BAR (أعلى الكيبورد: مخصص لاختيار وظهور التطبيق المستهدف) */}
-      <div className="bg-slate-900 text-white px-2.5 py-1.5 flex items-center justify-between border-b border-slate-800 text-xs shrink-0 select-none">
+      <div className="bg-slate-900 text-white px-2.5 py-1.5 flex items-center justify-between border-b border-slate-800 text-xs shrink-0 select-none gap-2">
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+          {/* Apps Drawer Button */}
+          {onOpenAppsDrawer && (
+            <button
+              id="target-app-open-drawer-btn"
+              onClick={onOpenAppsDrawer}
+              className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-xs flex items-center gap-1.5 shrink-0 transition-all active:scale-95 border border-blue-400"
+              title="فتح قائمة كافة التطبيقات ومحطة المستندات"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>كافة التطبيقات (8)</span>
+            </button>
+          )}
+
           <span className="text-[10px] text-slate-400 font-bold whitespace-nowrap pl-1">
             التطبيق المستهدف:
           </span>
@@ -221,6 +261,30 @@ export const TargetAppViewer: React.FC<TargetAppViewerProps> = ({
           >
             <span>✉️ الرسائل</span>
           </button>
+
+          {/* Browser */}
+          <button
+            onClick={() => onChangeTargetApp('browser')}
+            className={`px-2 py-0.5 rounded-md text-[11px] font-bold flex items-center gap-1 transition-all whitespace-nowrap ${
+              activeTargetApp === 'browser'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            <span>🌐 المتصفح</span>
+          </button>
+
+          {/* Email */}
+          <button
+            onClick={() => onChangeTargetApp('email')}
+            className={`px-2 py-0.5 rounded-md text-[11px] font-bold flex items-center gap-1 transition-all whitespace-nowrap ${
+              activeTargetApp === 'email'
+                ? 'bg-red-600 text-white shadow-xs'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            <span>📧 البريد</span>
+          </button>
         </div>
 
         {/* Keyboard Auto-switch status & toggle */}
@@ -238,6 +302,22 @@ export const TargetAppViewer: React.FC<TargetAppViewerProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Universal IME Active Status Bar */}
+      {isUniversalImeEnabled && (
+        <div className="bg-emerald-50 border-b border-emerald-200 px-3 py-1 flex items-center justify-between text-[11px] text-emerald-800 shrink-0">
+          <div className="flex items-center gap-1.5 truncate">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span className="font-bold shrink-0">لوحة المفاتيح متوافقة ونشطة في:</span>
+            <span className="bg-emerald-100/90 text-emerald-950 font-bold px-1.5 py-0.2 rounded text-[10px] truncate">
+              {activeFieldLabel}
+            </span>
+          </div>
+          <span className="text-[10px] text-emerald-700 font-medium hidden sm:inline shrink-0">
+            جاهز للقراءة، الكتابة والتحكم الكلي بالحروف والأرقام والكائنات ✓
+          </span>
+        </div>
+      )}
 
       {/* 2. TARGET APPLICATION INTERFACE (WhatsApp, Samsung Notes, Telegram, Word, Messages) */}
 
@@ -348,6 +428,7 @@ export const TargetAppViewer: React.FC<TargetAppViewerProps> = ({
                 ref={inputRef}
                 type="text"
                 value={text}
+                onFocus={() => handleFieldFocus('حقل محادثة واتساب')}
                 onChange={(e) => {
                   onChangeText(e.target.value);
                   onCursorChange(e.target.selectionStart || 0);
@@ -417,6 +498,7 @@ export const TargetAppViewer: React.FC<TargetAppViewerProps> = ({
               <input
                 type="text"
                 defaultValue="ملاحظات سامسونج نوت 10+ الذكية"
+                onFocus={() => handleFieldFocus('عنوان ملاحظات سامسونج')}
                 className="font-bold text-sm text-slate-800 bg-transparent focus:outline-none w-full"
                 inputMode={activeKeyboard === 'attached' ? 'none' : 'text'}
               />
@@ -469,6 +551,7 @@ export const TargetAppViewer: React.FC<TargetAppViewerProps> = ({
               <textarea
                 ref={textareaRef}
                 value={text}
+                onFocus={() => handleFieldFocus('ملاحظات سامسونج (نص الملاحظة)')}
                 onChange={(e) => {
                   onChangeText(e.target.value);
                   onCursorChange(e.target.selectionStart || 0);
@@ -564,6 +647,7 @@ export const TargetAppViewer: React.FC<TargetAppViewerProps> = ({
             <input
               type="text"
               value={text}
+              onFocus={() => handleFieldFocus('حقل محادثات تيليجرام')}
               onChange={(e) => {
                 onChangeText(e.target.value);
                 onCursorChange(e.target.selectionStart || 0);
@@ -646,6 +730,7 @@ export const TargetAppViewer: React.FC<TargetAppViewerProps> = ({
 
               <textarea
                 value={text}
+                onFocus={() => handleFieldFocus('مستند Word (محرر النصوص والصور)')}
                 onChange={(e) => {
                   onChangeText(e.target.value);
                   onCursorChange(e.target.selectionStart || 0);
@@ -719,6 +804,7 @@ export const TargetAppViewer: React.FC<TargetAppViewerProps> = ({
             <input
               type="text"
               value={excelData[activeCell.r]?.[activeCell.c] || ''}
+              onFocus={() => handleFieldFocus(`شريط صيغ إكسل fx (${String.fromCharCode(65 + activeCell.c)}${activeCell.r + 1})`)}
               onChange={(e) => {
                 const updated = excelData.map((row, ri) =>
                   ri === activeCell.r
@@ -788,7 +874,10 @@ export const TargetAppViewer: React.FC<TargetAppViewerProps> = ({
                                   );
                                   setExcelData(updated);
                                 }}
-                                onFocus={() => setActiveCell({ r: actualRowIdx, c: colIdx })}
+                                onFocus={() => {
+                                  setActiveCell({ r: actualRowIdx, c: colIdx });
+                                  handleFieldFocus(`خلية إكسل ${String.fromCharCode(65 + colIdx)}${actualRowIdx + 1}`);
+                                }}
                                 className="w-full bg-transparent focus:outline-none text-slate-800 font-medium"
                                 style={{
                                   fontFamily: settings.fontFamily,
@@ -853,18 +942,153 @@ export const TargetAppViewer: React.FC<TargetAppViewerProps> = ({
             <input
               type="text"
               value={text}
+              onFocus={() => handleFieldFocus('حقل رسائل SMS')}
               onChange={(e) => {
                 onChangeText(e.target.value);
                 onCursorChange(e.target.selectionStart || 0);
               }}
               placeholder="اكتب رسالة SMS..."
-              className="flex-1 bg-slate-100 text-xs px-3 py-1.5 rounded-full focus:outline-none"
+              className="flex-1 bg-slate-100 text-xs px-3 py-1.5 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-400"
               style={{ fontFamily: activeFont.fontFamily }}
               inputMode={activeKeyboard === 'attached' ? 'none' : 'text'}
             />
             <button onClick={handleSendChat} className="p-2 bg-purple-600 text-white rounded-full active:scale-95">
               <Send className="w-3.5 h-3.5 -rotate-90" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- APP 6: WEB BROWSER & SEARCH --- */}
+      {activeTargetApp === 'browser' && (
+        <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden relative">
+          {/* Browser Address & Search Bar */}
+          <div className="bg-slate-900 text-white px-3 py-2 flex items-center gap-2 text-xs shrink-0 select-none shadow-xs">
+            <Globe className="w-4 h-4 text-indigo-400 shrink-0" />
+            <input
+              type="text"
+              value={browserUrl}
+              onFocus={() => handleFieldFocus('شريط عنوان المتصفح')}
+              onChange={(e) => setBrowserUrl(e.target.value)}
+              className="flex-1 bg-slate-800 text-slate-200 text-xs px-3 py-1 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-400 font-mono"
+              placeholder="https://..."
+              dir="ltr"
+            />
+            <button
+              onClick={() => handleFieldFocus('شريط بحث المتصفح')}
+              className="p-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white active:scale-95"
+            >
+              <RotateCw className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Browser Content Simulated View */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div className="bg-white p-4 rounded-xl shadow-2xs border border-slate-200 space-y-3">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                <Search className="w-4 h-4 text-indigo-600" />
+                <span className="font-bold text-slate-800 text-xs">محرك البحث السريع:</span>
+              </div>
+              <input
+                type="text"
+                value={text}
+                onFocus={() => handleFieldFocus('حقل البحث في الإنترنت')}
+                onChange={(e) => {
+                  onChangeText(e.target.value);
+                  onCursorChange(e.target.selectionStart || 0);
+                }}
+                placeholder="ابحث في الويب أو اكتب استفسارك..."
+                className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                style={{ fontFamily: activeFont.fontFamily }}
+              />
+
+              <div className="space-y-2 pt-2">
+                <div className="p-2.5 rounded-lg bg-indigo-50/50 border border-indigo-100 text-xs">
+                  <h4 className="font-bold text-indigo-900 text-xs">سامسونج نوت 10+ | لوحة المفاتيح الملحقة المتوافقة</h4>
+                  <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                    تعمل كلوحة مفاتيح أساسية للهاتف بنظام الإدخال العالمي (Universal IME) بارتفاع 6.3 سم مع تشكيل كامل واختصارات Word و Excel.
+                  </p>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs">
+                  <h4 className="font-bold text-slate-800 text-xs">مستند العمل المفتوح:</h4>
+                  <p className="text-[11px] text-slate-600 mt-0.5 line-clamp-2" style={{ fontFamily: activeFont.fontFamily }}>
+                    {text || 'لا يوجد نص حالي. استخدم الكيبورد للكتابة أو اختر قالباً.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- APP 7: SAMSUNG EMAIL --- */}
+      {activeTargetApp === 'email' && (
+        <div className="flex-1 flex flex-col bg-white overflow-hidden relative">
+          {/* Email Header */}
+          <div className="bg-red-700 text-white px-3 py-2 flex items-center justify-between text-xs shrink-0 select-none shadow-xs">
+            <div className="flex items-center gap-2">
+              <Mail className="w-4 h-4 text-white" />
+              <span className="font-bold">إنشاء بريد إلكتروني (Samsung Email)</span>
+            </div>
+            <button
+              onClick={() => {
+                alert('تم إرسال البريد الإلكتروني بنجاح!');
+                onChangeText('');
+              }}
+              className="px-3 py-1 bg-white text-red-700 hover:bg-red-50 rounded-lg font-bold text-xs flex items-center gap-1 active:scale-95 shadow-2xs"
+            >
+              <Send className="w-3 h-3 -rotate-90" />
+              <span>إرسال</span>
+            </button>
+          </div>
+
+          {/* Email Fields */}
+          <div className="p-3 border-b border-slate-200 space-y-2 bg-slate-50 text-xs shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="w-14 text-slate-500 font-bold">إلى (To):</span>
+              <input
+                type="text"
+                value={emailTo}
+                onFocus={() => handleFieldFocus('عنوان المستلم في البريد')}
+                onChange={(e) => setEmailTo(e.target.value)}
+                className="flex-1 bg-white border border-slate-300 rounded px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-red-400 font-mono"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-14 text-slate-500 font-bold">الموضوع:</span>
+              <input
+                type="text"
+                value={emailSubject}
+                onFocus={() => handleFieldFocus('موضوع البريد الإلكتروني')}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                className="flex-1 bg-white border border-slate-300 rounded px-2.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-red-400 font-bold"
+              />
+            </div>
+          </div>
+
+          {/* Email Body Editor */}
+          <div className="flex-1 p-3 flex flex-col overflow-hidden">
+            <textarea
+              ref={textareaRef}
+              value={text}
+              onFocus={() => handleFieldFocus('نص البريد الإلكتروني')}
+              onChange={(e) => {
+                onChangeText(e.target.value);
+                onCursorChange(e.target.selectionStart || 0);
+              }}
+              placeholder="اكتب محتوى الرسالة الرسمية هنا باستخدام الكيبورد والخطوط العربية..."
+              className="flex-1 w-full p-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-400 resize-none text-xs sm:text-sm leading-relaxed"
+              style={{
+                fontFamily: activeFont.fontFamily,
+                fontSize: `${settings.fontSize}px`,
+                color: settings.fontColor,
+                fontWeight: settings.isBold ? 'bold' : 'normal',
+                fontStyle: settings.isItalic ? 'italic' : 'normal',
+                textDecoration: settings.isUnderline ? 'underline' : 'none',
+              }}
+              inputMode={activeKeyboard === 'attached' ? 'none' : 'text'}
+            />
           </div>
         </div>
       )}

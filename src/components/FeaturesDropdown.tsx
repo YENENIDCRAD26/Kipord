@@ -17,7 +17,8 @@ import {
   ChevronDown,
   X,
   ExternalLink,
-  Download
+  Download,
+  LayoutGrid,
 } from 'lucide-react';
 import { InsertModalTab, TargetAppType, ActiveKeyboardType } from '../types';
 
@@ -34,6 +35,7 @@ interface FeaturesDropdownProps {
   activeKeyboard: ActiveKeyboardType;
   currentFontName: string;
   onOpenApkModal?: () => void;
+  onOpenAppsDrawer?: () => void;
 }
 
 export const FeaturesDropdown: React.FC<FeaturesDropdownProps> = ({
@@ -49,6 +51,7 @@ export const FeaturesDropdown: React.FC<FeaturesDropdownProps> = ({
   activeKeyboard,
   currentFontName,
   onOpenApkModal,
+  onOpenAppsDrawer,
 }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -93,6 +96,19 @@ export const FeaturesDropdown: React.FC<FeaturesDropdownProps> = ({
       onAction: () => {
         onOpenApkModal?.();
         onClose();
+      },
+    },
+    {
+      id: 'appsDrawer',
+      icon: <LayoutGrid className="w-4 h-4 text-blue-600" />,
+      title: 'قائمة التطبيقات ومحطة المستندات الشاملة (8 تطبيقات)',
+      description: 'التبديل بين واتساب، ملاحظات سامسونج، وورد، إكسل، تيليجرام، رسائل، متصفح الإنترنت، والبريد الإلكتروني مع وضع التوافق كلوحة أساسية.',
+      badge: '8 تطبيقات + قوالب',
+      badgeColor: 'bg-blue-100 text-blue-800 border-blue-300',
+      actionLabel: 'فتح قائمة التطبيقات',
+      onAction: () => {
+        onClose();
+        if (onOpenAppsDrawer) onOpenAppsDrawer();
       },
     },
     {

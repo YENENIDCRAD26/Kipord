@@ -26,6 +26,7 @@ import { SearchReplaceModal } from './components/SearchReplaceModal';
 import { SpellCheckModal } from './components/SpellCheckModal';
 import { OpenFileModal } from './components/OpenFileModal';
 import { ShortcutsModal } from './components/ShortcutsModal';
+import { AppsDrawerModal } from './components/AppsDrawerModal';
 import { ShortcutHudToast, ShortcutHudNotification } from './components/ShortcutHudToast';
 import {
   getFormattedCurrentDate,
@@ -53,6 +54,10 @@ export default function App() {
 
   // Paper folding state: when true, paper folds down to reveal virtual phone screen
   const [isPaperFolded, setIsPaperFolded] = useState<boolean>(false);
+
+  // Central Apps Drawer and Universal IME states
+  const [isAppsDrawerOpen, setIsAppsDrawerOpen] = useState<boolean>(false);
+  const [isUniversalImeEnabled, setIsUniversalImeEnabled] = useState<boolean>(true);
 
   // View mode for the space above the keyboard: 'targetApp' (default), 'editorPaper', 'controllerHub'
   const [viewMode, setViewMode] = useState<'targetApp' | 'editorPaper' | 'controllerHub'>('editorPaper');
@@ -702,6 +707,8 @@ export default function App() {
               onOpenColorModal={() => setIsColorModalOpen(true)}
               onExportJpg={handleExportJpgGlobal}
               onExportPdf={handleExportPdfGlobal}
+              onOpenAppsDrawer={() => setIsAppsDrawerOpen(true)}
+              isUniversalImeEnabled={isUniversalImeEnabled}
             />
           </div>
         )}
@@ -736,6 +743,12 @@ export default function App() {
           onTogglePaperFold={() => setIsPaperFolded((prev) => !prev)}
           onShortcut={handleExecuteShortcut}
           onOpenShortcutsModal={() => setIsShortcutsModalOpen(true)}
+          onOpenAppsDrawer={() => {
+            setIsPaperFolded(true);
+            setIsAppsDrawerOpen(true);
+          }}
+          isUniversalImeEnabled={isUniversalImeEnabled}
+          onToggleUniversalIme={() => setIsUniversalImeEnabled((prev) => !prev)}
         />
       ) : (
         <NativeKeyboard
@@ -783,6 +796,10 @@ export default function App() {
         activeKeyboard={activeKeyboard}
         currentFontName={settings.fontFamilyName}
         onOpenApkModal={() => setIsApkModalOpen(true)}
+        onOpenAppsDrawer={() => {
+          setIsPaperFolded(true);
+          setIsAppsDrawerOpen(true);
+        }}
       />
 
       {/* Insert Media Modal (صورة، جدول، شكل، رموز، إيموجي) */}
@@ -885,6 +902,25 @@ export default function App() {
           setIsShortcutsModalOpen(false);
           handleExecuteShortcut(shortcutId);
         }}
+      />
+
+      {/* Central Apps Drawer & Document Hub Modal (قائمة التطبيقات ومحطة المستندات الشاملة) */}
+      <AppsDrawerModal
+        isOpen={isAppsDrawerOpen}
+        onClose={() => setIsAppsDrawerOpen(false)}
+        activeApp={activeTargetApp}
+        onSelectApp={(app) => {
+          setActiveTargetApp(app);
+          setIsPaperFolded(true);
+        }}
+        text={text}
+        onUpdateText={setText}
+        onOpenInsertModal={() => handleOpenInsertModal('image')}
+        onOpenFontsModal={() => setIsFontsModalOpen(true)}
+        onExportPdf={handleExportPdfGlobal}
+        onExportJpg={handleExportJpgGlobal}
+        isUniversalImeEnabled={isUniversalImeEnabled}
+        onToggleUniversalIme={() => setIsUniversalImeEnabled((prev) => !prev)}
       />
 
       {/* Dynamic Shortcut HUD Toast */}
