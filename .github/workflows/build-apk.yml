@@ -1,0 +1,87 @@
+name: Build Android APK (حزمة أندرويد APK)
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build Samsung Keyboard APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Project Dependencies
+        run: npm ci || npm install
+
+      - name: Compile Web Application
+        run: npm run build
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install & Initialize Capacitor for Android
+        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap add android || true
+          npx cap sync android
+
+      - name: Build Android Debug APK with Gradle
+        run: |
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --stacktrace
+          cd ..
+
+      - name: Prepare APK Output
+        run: |
+          mkdir -p release-apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk release-apk/Samsung-Note10-Arabic-Keyboard.apk
+          ls -la release-apk/
+
+      - name: Upload APK as GitHub Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Samsung-Note10-Arabic-Keyboard-APK
+          path: release-apk/Samsung-Note10-Arabic-Keyboard.apk
+          retention-days: 30
+
+      - name: Create GitHub Release with APK
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/heads/main')
+        with:
+          tag_name: v1.0.0-${{ github.run_number }}
+          name: "إصدار لوحة مفاتيح سامسونج نوت 10+ (v1.0.${{ github.run_number }})"
+          body: |
+            ### 📱 حزمة تطبيق لوحة المفاتيح العربية (APK) لهاتف سامسونج نوت 10+
+            - **الإصدار**: 1.0.${{ github.run_number }}
+            - **التوافق**: هواتف سامسونج جالاكسي ونظام أندرويد (One UI)
+            - **الميزات**:
+              - أبعاد دقيقة بارتفاع 6.3 سم لهاتف سامسونج نوت 10+
+              - تشكيل الحركات بالكامل في شريط علوي بارز
+              - اختصارات برامج Word و Excel المكتبية الكاملة
+              - محطة وتطبيقات العمل الشاملة (8 تطبيقات مدمجة)
+              - 18 خطاً عربياً أصيلاً وتصدير PDF / JPG
+            
+            قم بتحميل ملف **Samsung-Note10-Arabic-Keyboard.apk** المرفق وتثبيته مباشرة على هاتفك.
+          files: release-apk/Samsung-Note10-Arabic-Keyboard.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
