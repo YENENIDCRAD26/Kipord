@@ -22,6 +22,16 @@ import { HelpModal } from './components/HelpModal';
 import { InsertMediaModal } from './components/InsertMediaModal';
 import { PhoneFrame } from './components/PhoneFrame';
 import { ApkBuildModal } from './components/ApkBuildModal';
+import { SearchReplaceModal } from './components/SearchReplaceModal';
+import { SpellCheckModal } from './components/SpellCheckModal';
+import { OpenFileModal } from './components/OpenFileModal';
+import { ShortcutsModal } from './components/ShortcutsModal';
+import { ShortcutHudToast, ShortcutHudNotification } from './components/ShortcutHudToast';
+import {
+  getFormattedCurrentDate,
+  getFormattedCurrentTime,
+  generateAutoSumSnippet,
+} from './utils/shortcutManager';
 import { getWordSuggestions } from './utils/predictiveText';
 import { exportElementAsJpg, exportElementAsPdf } from './utils/exportUtils';
 
@@ -99,6 +109,46 @@ export default function App() {
   const [isInsertModalOpen, setIsInsertModalOpen] = useState<boolean>(false);
   const [isApkModalOpen, setIsApkModalOpen] = useState<boolean>(false);
   const [insertModalTab, setInsertModalTab] = useState<InsertModalTab>('image');
+
+  // Shortcuts & Office Tools Modals State
+  const [isSearchReplaceModalOpen, setIsSearchReplaceModalOpen] = useState<boolean>(false);
+  const [searchReplaceMode, setSearchReplaceMode] = useState<'search' | 'replace'>('search');
+  const [isSpellCheckModalOpen, setIsSpellCheckModalOpen] = useState<boolean>(false);
+  const [isOpenFileModalOpen, setIsOpenFileModalOpen] = useState<boolean>(false);
+  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState<boolean>(false);
+  const [hudNotification, setHudNotification] = useState<ShortcutHudNotification | null>(null);
+
+  // History state for Ctrl+Z (Undo) and Ctrl+Y (Redo)
+  const [history, setHistory] = useState<string[]>([INITIAL_TEXT]);
+  const [historyIndex, setHistoryIndex] = useState<number>(0);
+  const isHistoryActionRef = useRef<boolean>(false);
+
+  const triggerHud = useCallback((keys: string, message: string) => {
+    setHudNotification({
+      id: Date.now().toString(),
+      keys,
+      message,
+      timestamp: Date.now(),
+    });
+  }, []);
+
+  // Track text changes in history stack (debounced)
+  useEffect(() => {
+    if (isHistoryActionRef.current) {
+      isHistoryActionRef.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      setHistory((prev) => {
+        if (prev[historyIndex] === text) return prev;
+        const next = prev.slice(0, historyIndex + 1);
+        return [...next, text];
+      });
+      setHistoryIndex((prev) => prev + 1);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [text, historyIndex]);
 
   // Find active font object
   const activeFont: FontItem = APPROVED_FONTS.find(
@@ -256,6 +306,326 @@ export default function App() {
     }
   };
 
+  // Master Shortcut Execution Handler
+  const handleExecuteShortcut = useCallback((shortcutId: string) => {
+    switch (shortcutId) {
+      case 'new_doc': {
+        // Ctrl + N: فتح مستند جديد
+        if (text.trim()) {
+          try {
+            const raw = localStorage.getItem('samsung_keyboard_saved_drafts');
+            const drafts = raw ? JSON.parse(raw) : [];
+            drafts.unshift({
+              id: `draft-${Date.now()}`,
+              title: text.slice(0, 30).trim() || 'مسودة سابقة',
+              snippet: text.slice(0, 80).replace(/\n/g, ' '),
+              date: new Date().toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }),
+              text,
+            });
+            localStorage.setItem('samsung_keyboard_saved_drafts', JSON.stringify(drafts.slice(0, 20)));
+          } catch {}
+        }
+        setText('');
+        setCursorPos(0);
+        setImages([]);
+        setTables([]);
+        triggerHud('Ctrl + N', '📄 مستند جديد — تم مسح المحرر وحفظ المسودة السابقة في الأرشيف');
+        break;
+      }
+
+      case 'open_file': {
+        // Ctrl + O: فتح ملف محفوظ
+        setIsOpenFileModalOpen(true);
+        triggerHud('Ctrl + O', '📂 فتح ملف محفوظ أو استرجاع مسودة سابقة');
+        break;
+      }
+
+      case 'save_doc': {
+        // Ctrl + S: حفظ الملف أو المستند
+        try {
+          const raw = localStorage.getItem('samsung_keyboard_saved_drafts');
+          const drafts = raw ? JSON.parse(raw) : [];
+          drafts.unshift({
+            id: `draft-${Date.now()}`,
+            title: text.slice(0, 30).trim() || 'مستند محفوظ',
+            snippet: text.slice(0, 80).replace(/\n/g, ' '),
+            date: new Date().toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' }),
+            text,
+          });
+          localStorage.setItem('samsung_keyboard_saved_drafts', JSON.stringify(drafts.slice(0, 20)));
+
+          // Trigger file download
+          const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `مستند_سامسونج_${new Date().toISOString().slice(0, 10)}.txt`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          triggerHud('Ctrl + S', '💾 تم حفظ المستند وتنزيل نسخة احتياطية بنجاح');
+        } catch {
+          triggerHud('Ctrl + S', '💾 تم حفظ المستند محلياً');
+        }
+        break;
+      }
+
+      case 'print_doc': {
+        // Ctrl + P: طباعة المستند أو ورقة العمل
+        triggerHud('Ctrl + P', '🖨️ بدء طباعة المستند أو ورقة العمل');
+        setTimeout(() => window.print(), 250);
+        break;
+      }
+
+      case 'copy_text': {
+        // Ctrl + C: نسخ النص
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(() => {
+            triggerHud('Ctrl + C', '📋 تم نسخ كامل محتوى المستند إلى الحافظة');
+          }).catch(() => {
+            triggerHud('Ctrl + C', '📋 تم النسخ');
+          });
+        }
+        break;
+      }
+
+      case 'cut_text': {
+        // Ctrl + X: قص المحدد
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(() => {
+            setText('');
+            setCursorPos(0);
+            triggerHud('Ctrl + X', '✂️ تم قص المحتوى إلى الحافظة بنجاح');
+          }).catch(() => {
+            setText('');
+            setCursorPos(0);
+            triggerHud('Ctrl + X', '✂️ تم القص');
+          });
+        }
+        break;
+      }
+
+      case 'paste_text': {
+        // Ctrl + V: لصق المحتوى المنسوخ
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          navigator.clipboard.readText().then((clip) => {
+            if (clip) {
+              handleKeyPress(clip);
+              triggerHud('Ctrl + V', `📥 تم لصق (${clip.length}) حرف من الحافظة`);
+            } else {
+              triggerHud('Ctrl + V', '📥 الحافظة فارغة');
+            }
+          }).catch(() => {
+            triggerHud('Ctrl + V', '📥 يمكنك اللصق بالنقر المطول داخل النص');
+          });
+        } else {
+          triggerHud('Ctrl + V', '📥 يمكنك استخدام خيار اللصق السريع');
+        }
+        break;
+      }
+
+      case 'select_all': {
+        // Ctrl + A: تحديد الكل
+        const textarea = document.querySelector('textarea');
+        if (textarea) {
+          textarea.focus();
+          textarea.setSelectionRange(0, textarea.value.length);
+        }
+        triggerHud('Ctrl + A', '🔲 تم تحديد كامل النص في المستند');
+        break;
+      }
+
+      case 'undo': {
+        // Ctrl + Z: التراجع عن الإجراء الأخير
+        if (historyIndex > 0) {
+          isHistoryActionRef.current = true;
+          const targetIndex = historyIndex - 1;
+          setHistoryIndex(targetIndex);
+          const prevContent = history[targetIndex] ?? '';
+          setText(prevContent);
+          setCursorPos(prevContent.length);
+          triggerHud('Ctrl + Z', '↩️ التراجع عن الإجراء الأخير');
+        } else {
+          triggerHud('Ctrl + Z', '↩️ لا توجد إجراءات سابقة للتراجع عنها');
+        }
+        break;
+      }
+
+      case 'redo': {
+        // Ctrl + Y: إعادة الإجراء
+        if (historyIndex < history.length - 1) {
+          isHistoryActionRef.current = true;
+          const targetIndex = historyIndex + 1;
+          setHistoryIndex(targetIndex);
+          const nextContent = history[targetIndex] ?? '';
+          setText(nextContent);
+          setCursorPos(nextContent.length);
+          triggerHud('Ctrl + Y', '↪️ إعادة الإجراء الذي تم التراجع عنه');
+        } else {
+          triggerHud('Ctrl + Y', '↪️ لا توجد إجراءات أخرى للإعادة');
+        }
+        break;
+      }
+
+      case 'search': {
+        // Ctrl + F: البحث عن نص
+        setSearchReplaceMode('search');
+        setIsSearchReplaceModalOpen(true);
+        triggerHud('Ctrl + F', '🔍 فتح نافذة البحث السريع في النص');
+        break;
+      }
+
+      case 'replace': {
+        // Ctrl + H: فتح نافذة البحث والاستبدال
+        setSearchReplaceMode('replace');
+        setIsSearchReplaceModalOpen(true);
+        triggerHud('Ctrl + H', '🔄 فتح نافذة البحث والاستبدال');
+        break;
+      }
+
+      case 'bold': {
+        // Ctrl + B: جعل الخط غامقاً
+        setSettings((prev) => {
+          const nextBold = !prev.isBold;
+          triggerHud('Ctrl + B', `𝗕 تم ${nextBold ? 'تفعيل' : 'إلغاء'} الخط الغامق (Bold)`);
+          return { ...prev, isBold: nextBold };
+        });
+        break;
+      }
+
+      case 'italic': {
+        // Ctrl + I: جعل الخط مائلاً
+        setSettings((prev) => {
+          const nextItalic = !prev.isItalic;
+          triggerHud('Ctrl + I', `𝐼 تم ${nextItalic ? 'تفعيل' : 'إلغاء'} الخط المائل (Italic)`);
+          return { ...prev, isItalic: nextItalic };
+        });
+        break;
+      }
+
+      case 'underline': {
+        // Ctrl + U: وضع خط تحت النص
+        setSettings((prev) => {
+          const nextUnderline = !prev.isUnderline;
+          triggerHud('Ctrl + U', `<u>U</u> تم ${nextUnderline ? 'تفعيل' : 'إلغاء'} التسطير (Underline)`);
+          return { ...prev, isUnderline: nextUnderline };
+        });
+        break;
+      }
+
+      case 'spell_check': {
+        // F7: التدقيق الإملائي والنحوي
+        setIsSpellCheckModalOpen(true);
+        triggerHud('F7', '📖 التدقيق الإملائي والنحوي للمستند');
+        break;
+      }
+
+      case 'edit_cell': {
+        // F2: تحرير الخلية / المحرر
+        const textarea = document.querySelector('textarea');
+        if (textarea) {
+          textarea.focus();
+        }
+        triggerHud('F2', '✏️ تحرير الخلية النشطة أو التركيز على محرر النصوص');
+        break;
+      }
+
+      case 'toggle_filters': {
+        // Ctrl + Shift + L: تفعيل/إلغاء التصفية
+        triggerHud('Ctrl + Shift + L', '⚡ تم تبديل عوامل التصفية (Filters)');
+        break;
+      }
+
+      case 'insert_date': {
+        // Ctrl + ; : إدراج تاريخ اليوم
+        const dateStr = getFormattedCurrentDate();
+        handleKeyPress(` ${dateStr} `);
+        triggerHud('Ctrl + ;', `📅 تم إدراج التاريخ الحالي: ${dateStr}`);
+        break;
+      }
+
+      case 'insert_time': {
+        // Ctrl + Shift + : : إدراج الوقت الحالي
+        const timeStr = getFormattedCurrentTime();
+        handleKeyPress(` ${timeStr} `);
+        triggerHud('Ctrl + Shift + :', `⏰ تم إدراج الوقت الحالي: ${timeStr}`);
+        break;
+      }
+
+      case 'auto_sum': {
+        // Alt + = : الجمع التلقائي
+        const snippet = generateAutoSumSnippet(text, cursorPos);
+        handleKeyPress(snippet);
+        triggerHud('Alt + =', `∑ إدراج دالة الجمع التلقائي: ${snippet.trim()}`);
+        break;
+      }
+
+      default:
+        break;
+    }
+  }, [text, cursorPos, history, historyIndex, handleKeyPress, triggerHud]);
+
+  // Physical/Hardware keyboard shortcuts listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F7') {
+        e.preventDefault();
+        handleExecuteShortcut('spell_check');
+        return;
+      }
+      if (e.key === 'F2') {
+        e.preventDefault();
+        handleExecuteShortcut('edit_cell');
+        return;
+      }
+      if (e.altKey && (e.key === '=' || e.key === '+')) {
+        e.preventDefault();
+        handleExecuteShortcut('auto_sum');
+        return;
+      }
+      if (e.ctrlKey || e.metaKey) {
+        if (e.shiftKey && (e.key === 'L' || e.key === 'l')) {
+          e.preventDefault();
+          handleExecuteShortcut('toggle_filters');
+          return;
+        }
+        if (e.shiftKey && (e.key === ':' || e.key === ';')) {
+          e.preventDefault();
+          handleExecuteShortcut('insert_time');
+          return;
+        }
+        if (e.key === ';') {
+          e.preventDefault();
+          handleExecuteShortcut('insert_date');
+          return;
+        }
+        const key = e.key.toLowerCase();
+        const map: Record<string, string> = {
+          n: 'new_doc',
+          o: 'open_file',
+          s: 'save_doc',
+          p: 'print_doc',
+          a: 'select_all',
+          z: 'undo',
+          y: 'redo',
+          f: 'search',
+          h: 'replace',
+          b: 'bold',
+          i: 'italic',
+          u: 'underline',
+        };
+        if (map[key]) {
+          e.preventDefault();
+          handleExecuteShortcut(map[key]);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleExecuteShortcut]);
+
   return (
     <PhoneFrame
       isPhoneFrame={isPhoneFrame}
@@ -364,6 +734,8 @@ export default function App() {
           onToggleNativeKeyboard={toggleActiveKeyboard}
           isPaperFolded={isPaperFolded}
           onTogglePaperFold={() => setIsPaperFolded((prev) => !prev)}
+          onShortcut={handleExecuteShortcut}
+          onOpenShortcutsModal={() => setIsShortcutsModalOpen(true)}
         />
       ) : (
         <NativeKeyboard
@@ -470,6 +842,55 @@ export default function App() {
       <ApkBuildModal
         isOpen={isApkModalOpen}
         onClose={() => setIsApkModalOpen(false)}
+      />
+
+      {/* Search and Replace Modal (Ctrl + F & Ctrl + H) */}
+      <SearchReplaceModal
+        isOpen={isSearchReplaceModalOpen}
+        onClose={() => setIsSearchReplaceModalOpen(false)}
+        text={text}
+        onUpdateText={(newText: string) => {
+          setText(newText);
+        }}
+        mode={searchReplaceMode}
+      />
+
+      {/* Arabic Spell and Grammar Check Modal (F7) */}
+      <SpellCheckModal
+        isOpen={isSpellCheckModalOpen}
+        onClose={() => setIsSpellCheckModalOpen(false)}
+        text={text}
+        onUpdateText={(correctedText: string) => {
+          setText(correctedText);
+          setCursorPos(correctedText.length);
+        }}
+      />
+
+      {/* Open File & Saved Drafts Modal (Ctrl + O) */}
+      <OpenFileModal
+        isOpen={isOpenFileModalOpen}
+        onClose={() => setIsOpenFileModalOpen(false)}
+        onLoadText={(loadedText: string) => {
+          setText(loadedText);
+          setCursorPos(loadedText.length);
+          triggerHud('Ctrl + O', '📂 تم استرجاع المستند من الأرشيف بنجاح');
+        }}
+      />
+
+      {/* Shortcuts Guide & Test Modal */}
+      <ShortcutsModal
+        isOpen={isShortcutsModalOpen}
+        onClose={() => setIsShortcutsModalOpen(false)}
+        onTriggerShortcut={(shortcutId: string) => {
+          setIsShortcutsModalOpen(false);
+          handleExecuteShortcut(shortcutId);
+        }}
+      />
+
+      {/* Dynamic Shortcut HUD Toast */}
+      <ShortcutHudToast
+        notification={hudNotification}
+        onDismiss={() => setHudNotification(null)}
       />
     </PhoneFrame>
   );

@@ -56,6 +56,6 @@ export interface DocTable {
 
 export type InsertModalTab = 'image' | 'shape' | 'emoji' | 'symbol' | 'table';
 
-export type TargetAppType = 'whatsapp' | 'samsungNotes' | 'telegram' | 'wordDoc' | 'messages';
+export type TargetAppType = 'whatsapp' | 'samsungNotes' | 'telegram' | 'wordDoc' | 'excelSheet' | 'messages';
 
 export type ActiveKeyboardType = 'attached' | 'native';

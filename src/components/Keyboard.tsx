@@ -20,6 +20,10 @@ import {
   RotateCw,
   Plus,
   Image as ImageIcon,
+  Zap,
+  Command,
+  BookOpen,
+  Edit3,
 } from 'lucide-react';
 import {
   ARABIC_ROWS_NORMAL,
@@ -35,6 +39,26 @@ import { SuggestionBar } from './SuggestionBar';
 const WESTERN_TO_ARABIC_DIGITS: Record<string, string> = {
   '0': '٠', '1': '١', '2': '٢', '3': '٣', '4': '٤',
   '5': '٥', '6': '٦', '7': '٧', '8': '٨', '9': '٩',
+};
+
+// Map of key code to Arabic shortcut label when Ctrl is active
+const CTRL_SHORTCUT_LABELS: Record<string, string> = {
+  KeyS: 'حفظ (S)',
+  KeyN: 'جديد (N)',
+  KeyO: 'فتح (O)',
+  KeyP: 'طباعة (P)',
+  KeyB: 'غامق (B)',
+  KeyI: 'مائل (I)',
+  KeyU: 'تسطير (U)',
+  KeyZ: 'تراجع (Z)',
+  KeyY: 'إعادة (Y)',
+  KeyF: 'بحث (F)',
+  KeyH: 'استبدال (H)',
+  KeyA: 'تحديد (A)',
+  KeyC: 'نسخ (C)',
+  KeyX: 'قص (X)',
+  KeyV: 'لصق (V)',
+  Semicolon: 'تاريخ (;)',
 };
 
 interface KeyboardProps {
@@ -60,6 +84,8 @@ interface KeyboardProps {
   onToggleNativeKeyboard?: () => void;
   isPaperFolded?: boolean;
   onTogglePaperFold?: () => void;
+  onShortcut?: (shortcutId: string) => void;
+  onOpenShortcutsModal?: () => void;
 }
 
 export const Keyboard: React.FC<KeyboardProps> = ({
@@ -85,6 +111,8 @@ export const Keyboard: React.FC<KeyboardProps> = ({
   onToggleNativeKeyboard,
   isPaperFolded = false,
   onTogglePaperFold,
+  onShortcut,
+  onOpenShortcutsModal,
 }) => {
   const [lang, setLang] = useState<'ar' | 'en'>('ar');
   const [numberFormat, setNumberFormat] = useState<'western' | 'arabic'>('western');
@@ -151,6 +179,107 @@ export const Keyboard: React.FC<KeyboardProps> = ({
     if (key.code === 'AltLeft') {
       setIsAlt(!isAlt);
       return;
+    }
+
+    // --- SHORTCUTS EXECUTION WHEN MODIFIERS ARE ACTIVE ---
+
+    // 1. Alt + = (AutoSum)
+    if (isAlt) {
+      if (key.code === 'PlusMinus' || key.label === '=' || key.label === '±' || key.label === '+' || key.shiftLabel === '+') {
+        onShortcut?.('auto_sum');
+        setIsAlt(false);
+        return;
+      }
+    }
+
+    // 2. Ctrl + Shift combinations
+    if (isCtrl && isShift) {
+      // Ctrl + Shift + L -> Toggle Filters (Excel)
+      if (key.code === 'KeyL') {
+        onShortcut?.('toggle_filters');
+        setIsCtrl(false);
+        setIsShift(false);
+        return;
+      }
+      // Ctrl + Shift + : -> Insert Current Time (Excel)
+      if (key.code === 'Semicolon' || key.label === ':' || key.label === ';' || key.shiftLabel === ':') {
+        onShortcut?.('insert_time');
+        setIsCtrl(false);
+        setIsShift(false);
+        return;
+      }
+    }
+
+    // 3. Ctrl combinations (Common Word & Excel)
+    if (isCtrl) {
+      switch (key.code) {
+        case 'KeyN':
+          onShortcut?.('new_doc');
+          setIsCtrl(false);
+          return;
+        case 'KeyO':
+          onShortcut?.('open_file');
+          setIsCtrl(false);
+          return;
+        case 'KeyS':
+          onShortcut?.('save_doc');
+          setIsCtrl(false);
+          return;
+        case 'KeyP':
+          onShortcut?.('print_doc');
+          setIsCtrl(false);
+          return;
+        case 'KeyC':
+          onShortcut?.('copy_text');
+          setIsCtrl(false);
+          return;
+        case 'KeyX':
+          onShortcut?.('cut_text');
+          setIsCtrl(false);
+          return;
+        case 'KeyV':
+          onShortcut?.('paste_text');
+          setIsCtrl(false);
+          return;
+        case 'KeyA':
+          onShortcut?.('select_all');
+          setIsCtrl(false);
+          return;
+        case 'KeyZ':
+          onShortcut?.('undo');
+          setIsCtrl(false);
+          return;
+        case 'KeyY':
+          onShortcut?.('redo');
+          setIsCtrl(false);
+          return;
+        case 'KeyF':
+          onShortcut?.('search');
+          setIsCtrl(false);
+          return;
+        case 'KeyH':
+          onShortcut?.('replace');
+          setIsCtrl(false);
+          return;
+        case 'KeyB':
+          onShortcut?.('bold');
+          setIsCtrl(false);
+          return;
+        case 'KeyI':
+          onShortcut?.('italic');
+          setIsCtrl(false);
+          return;
+        case 'KeyU':
+          onShortcut?.('underline');
+          setIsCtrl(false);
+          return;
+        case 'Semicolon':
+          onShortcut?.('insert_date');
+          setIsCtrl(false);
+          return;
+        default:
+          break;
+      }
     }
 
     if (key.code === 'LangToggle') {
@@ -358,7 +487,94 @@ export const Keyboard: React.FC<KeyboardProps> = ({
             style={{ backgroundColor: settings.fontColor }}
           />
         </button>
+
+        {/* 8. اختصارات ⚡ (دليل واختصارات Word & Excel) */}
+        {onOpenShortcutsModal && (
+          <button
+            id="kb-shortcuts-btn"
+            onClick={() => {
+              triggerFeedback(true);
+              onOpenShortcutsModal();
+            }}
+            className="flex items-center gap-1 px-2 py-0.5 rounded-md border border-amber-400 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold shadow-2xs transition-all active:scale-95 text-[11px] shrink-0"
+            title="دليل واختصارات وورد وإكسل (Ctrl & Alt & Shift)"
+          >
+            <Zap className="w-3 h-3 text-amber-600 fill-amber-500" />
+            <span>اختصارات</span>
+          </button>
+        )}
+
+        {/* 9. F2 (تحرير الخلية / المحرر) */}
+        <button
+          id="kb-f2-btn"
+          onClick={() => {
+            triggerFeedback(true);
+            onShortcut?.('edit_cell');
+          }}
+          className="px-1.5 py-0.5 rounded-md border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 font-mono font-bold shadow-2xs transition-all active:scale-95 text-[10px] shrink-0"
+          title="F2: تحرير الخلية في إكسل أو التركيز على المحرر"
+        >
+          F2
+        </button>
+
+        {/* 10. F7 (التدقيق الإملائي والنحوي) */}
+        <button
+          id="kb-f7-btn"
+          onClick={() => {
+            triggerFeedback(true);
+            onShortcut?.('spell_check');
+          }}
+          className="px-1.5 py-0.5 rounded-md border border-indigo-300 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-mono font-bold shadow-2xs transition-all active:scale-95 text-[10px] shrink-0"
+          title="F7: إجراء التدقيق الإملائي والنحوي الشامل"
+        >
+          F7
+        </button>
       </div>
+
+      {/* ACTIVE MODIFIERS HELPER BANNER (شريط توجيهي لاختصارات Ctrl و Alt النشطة) */}
+      {isCtrl && (
+        <div
+          id="kb-ctrl-active-banner"
+          className="flex items-center justify-between px-2 py-1 bg-gradient-to-r from-blue-700 to-indigo-700 text-white text-[10px] sm:text-[11px] font-bold shrink-0 animate-in fade-in"
+          dir="rtl"
+        >
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+            <span className="bg-white text-blue-800 px-1.5 py-0.2 rounded font-mono text-[9px] uppercase tracking-wider font-extrabold shadow-2xs">
+              Ctrl مفعّل
+            </span>
+            <span className="truncate">
+              S: حفظ | N: جديد | O: فتح | P: طباعة | B: غامق | Z: تراجع | F: بحث | C: نسخ | V: لصق | A: تحديد | ;: تاريخ
+            </span>
+          </div>
+          <button
+            onClick={() => setIsCtrl(false)}
+            className="text-white/90 hover:text-white px-1.5 py-0.5 text-[9px] bg-blue-900/80 hover:bg-blue-900 rounded mr-1 shrink-0"
+          >
+            إلغاء ✕
+          </button>
+        </div>
+      )}
+
+      {isAlt && (
+        <div
+          id="kb-alt-active-banner"
+          className="flex items-center justify-between px-2 py-1 bg-gradient-to-r from-purple-700 to-fuchsia-700 text-white text-[10px] sm:text-[11px] font-bold shrink-0 animate-in fade-in"
+          dir="rtl"
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="bg-white text-purple-900 px-1.5 py-0.2 rounded font-mono text-[9px] uppercase tracking-wider font-extrabold shadow-2xs">
+              Alt مفعّل
+            </span>
+            <span>اضغط مفتاح (=) أو (±) لإدراج دالة التجميع التلقائي (=SUM)</span>
+          </div>
+          <button
+            onClick={() => setIsAlt(false)}
+            className="text-white/90 hover:text-white px-1.5 py-0.5 text-[9px] bg-purple-900/80 hover:bg-purple-900 rounded mr-1 shrink-0"
+          >
+            إلغاء ✕
+          </button>
+        </div>
+      )}
 
       {/* 2. PREDICTIVE WORD SUGGESTIONS BAR (الشريط العلوي لاقتراحات الكلمات التنبؤية) */}
       {settings.showSuggestionsBar && (
@@ -602,12 +818,14 @@ export const Keyboard: React.FC<KeyboardProps> = ({
                 return (
                   <button
                     key={key.code}
+                    id="kb-key-ctrl"
                     onClick={() => handleKeyClick(key)}
-                    className={`rounded-md border font-bold text-[10px] sm:text-xs shadow-2xs flex items-center justify-center transition-all active:scale-95 min-w-[24px] sm:min-w-[32px] h-full max-h-[38px] min-h-[26px] px-1 ${
+                    className={`rounded-md border font-bold text-[10px] sm:text-xs shadow-2xs flex items-center justify-center transition-all active:scale-95 min-w-[26px] sm:min-w-[34px] h-full max-h-[38px] min-h-[26px] px-1 ${
                       isCtrl
-                        ? 'bg-slate-700 text-white border-slate-800'
+                        ? 'bg-blue-600 text-white border-blue-700 ring-2 ring-blue-400 font-extrabold animate-pulse'
                         : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
                     }`}
+                    title="Control (Ctrl): تفعيل اختصارات Word & Excel"
                   >
                     Ctrl
                   </button>
@@ -616,19 +834,42 @@ export const Keyboard: React.FC<KeyboardProps> = ({
 
               // Standard Character Key
               const isPressed = pressedKey === key.code;
+              const hasCtrlShortcut = isCtrl && Boolean(CTRL_SHORTCUT_LABELS[key.code]);
+              const hasAltAutoSum = isAlt && (key.code === 'PlusMinus' || key.label === '=' || key.label === '±' || key.shiftLabel === '+');
+
               return (
                 <button
                   key={key.code}
                   onClick={() => handleKeyClick(key)}
-                  className={`flex-1 rounded-md bg-white border border-slate-300 text-slate-900 shadow-2xs flex flex-col items-center justify-center relative transition-all select-none hover:bg-slate-50 hover:border-slate-400 active:scale-95 min-w-[18px] sm:min-w-[24px] h-full max-h-[38px] min-h-[26px] px-0.5 ${
-                    isPressed ? 'bg-blue-100 border-blue-400 scale-95 ring-1 ring-blue-300' : ''
+                  className={`flex-1 rounded-md border text-slate-900 shadow-2xs flex flex-col items-center justify-center relative transition-all select-none hover:border-slate-400 active:scale-95 min-w-[18px] sm:min-w-[24px] h-full max-h-[38px] min-h-[26px] px-0.5 ${
+                    hasCtrlShortcut
+                      ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-300'
+                      : hasAltAutoSum
+                      ? 'bg-purple-50 border-purple-400 ring-1 ring-purple-300'
+                      : isPressed
+                      ? 'bg-blue-100 border-blue-400 scale-95 ring-1 ring-blue-300'
+                      : 'bg-white border-slate-300 hover:bg-slate-50'
                   }`}
                   style={{
                     fontFamily: lang === 'ar' ? settings.fontFamily : 'inherit',
                   }}
                 >
+                  {/* Shortcut badge if Ctrl is active */}
+                  {hasCtrlShortcut && (
+                    <span className="absolute -top-1.5 left-0 right-0 mx-auto text-[7px] bg-blue-600 text-white font-bold rounded-xs px-0.5 pointer-events-none truncate text-center shadow-xs max-w-[96%] leading-tight">
+                      {CTRL_SHORTCUT_LABELS[key.code]}
+                    </span>
+                  )}
+
+                  {/* AutoSum badge if Alt is active */}
+                  {hasAltAutoSum && (
+                    <span className="absolute -top-1.5 left-0 right-0 mx-auto text-[7px] bg-purple-700 text-white font-bold rounded-xs px-0.5 pointer-events-none truncate text-center shadow-xs max-w-[96%] leading-tight">
+                      ∑ AutoSum
+                    </span>
+                  )}
+
                   {/* Shift label in corner if available */}
-                  {lang === 'ar' && key.shiftLabel && (
+                  {!hasCtrlShortcut && !hasAltAutoSum && lang === 'ar' && key.shiftLabel && (
                     <span className="absolute top-0.5 right-1 text-[8px] text-slate-400 font-normal leading-none pointer-events-none">
                       {key.shiftLabel}
                     </span>

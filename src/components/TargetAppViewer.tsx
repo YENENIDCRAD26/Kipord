@@ -23,7 +23,12 @@ import {
   Plus,
   ArrowRight,
   ShieldCheck,
-  ChevronDown
+  ChevronDown,
+  Filter,
+  Sigma,
+  Calendar,
+  Clock,
+  Table,
 } from 'lucide-react';
 import { KeyboardSettings, FontItem, DocImage, DocTable, TargetAppType, InsertModalTab, ActiveKeyboardType } from '../types';
 
@@ -98,6 +103,18 @@ export const TargetAppViewer: React.FC<TargetAppViewerProps> = ({
       fontName: 'أميري',
     },
   ]);
+
+  // Excel Sheet Interactive State
+  const [excelData, setExcelData] = useState<string[][]>([
+    ['البند', 'الكمية', 'سعر الوحدة (ر.س)', 'الإجمالي'],
+    ['سامسونج جالاكسي نوت 10+', '15', '3200', '48000'],
+    ['شاشة Super AMOLED 6.8', '25', '450', '11250'],
+    ['كيبورد ملحق 3.5cm', '60', '140', '8400'],
+    ['قلم S-Pen مدمج', '40', '95', '3800'],
+    ['المجموع الإجمالي =SUM', '140', '-', '71450'],
+  ]);
+  const [activeCell, setActiveCell] = useState<{ r: number; c: number }>({ r: 1, c: 0 });
+  const [isExcelFiltersOn, setIsExcelFiltersOn] = useState<boolean>(true);
 
   // Keep chat scrolled to bottom
   useEffect(() => {
@@ -179,6 +196,18 @@ export const TargetAppViewer: React.FC<TargetAppViewerProps> = ({
             }`}
           >
             <span>📄 مستند وورد</span>
+          </button>
+
+          {/* Excel / Spreadsheet */}
+          <button
+            onClick={() => onChangeTargetApp('excelSheet')}
+            className={`px-2 py-0.5 rounded-md text-[11px] font-bold flex items-center gap-1 transition-all whitespace-nowrap ${
+              activeTargetApp === 'excelSheet'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            <span>📊 مصنف إكسل</span>
           </button>
 
           {/* Messages */}
@@ -635,6 +664,165 @@ export const TargetAppViewer: React.FC<TargetAppViewerProps> = ({
                 inputMode={activeKeyboard === 'attached' ? 'none' : 'text'}
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- APP: MICROSOFT EXCEL MOBILE INTERFACE --- */}
+      {activeTargetApp === 'excelSheet' && (
+        <div className="flex-1 flex flex-col bg-slate-100 overflow-hidden relative">
+          {/* Excel Ribbon Bar */}
+          <div className="bg-[#107c41] text-white px-3 py-1.5 flex items-center justify-between text-xs shrink-0 select-none">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-xs">Microsoft Excel Mobile</span>
+              <span className="text-[10px] bg-emerald-800 px-1.5 py-0.2 rounded font-mono">مصنف1.xlsx</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setIsExcelFiltersOn(!isExcelFiltersOn)}
+                className={`px-2 py-0.5 rounded text-[11px] font-semibold flex items-center gap-1 transition-all ${
+                  isExcelFiltersOn ? 'bg-emerald-800 text-white' : 'bg-emerald-950/40 text-emerald-200'
+                }`}
+                title="تصفية (Ctrl + Shift + L)"
+              >
+                <Filter className="w-3 h-3" />
+                <span>تصفية</span>
+              </button>
+              <button
+                onClick={() => {
+                  // AutoSum column
+                  const colIdx = activeCell.c;
+                  let sum = 0;
+                  for (let r = 1; r < excelData.length - 1; r++) {
+                    const val = parseFloat(excelData[r][colIdx]) || 0;
+                    sum += val;
+                  }
+                  const updated = [...excelData];
+                  updated[excelData.length - 1][colIdx] = sum.toString();
+                  setExcelData(updated);
+                }}
+                className="px-2 py-0.5 bg-emerald-700 hover:bg-emerald-800 rounded text-[11px] font-semibold flex items-center gap-1"
+                title="الجمع التلقائي (Alt + =)"
+              >
+                <Sigma className="w-3 h-3 text-amber-300" />
+                <span>AutoSum</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Excel Formula Bar */}
+          <div className="bg-white border-b border-slate-300 px-3 py-1 flex items-center gap-2 text-xs shrink-0">
+            <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 min-w-[36px] text-center">
+              {String.fromCharCode(65 + activeCell.c)}{activeCell.r + 1}
+            </span>
+            <span className="font-serif italic font-bold text-slate-400 select-none">fx</span>
+            <input
+              type="text"
+              value={excelData[activeCell.r]?.[activeCell.c] || ''}
+              onChange={(e) => {
+                const updated = excelData.map((row, ri) =>
+                  ri === activeCell.r
+                    ? row.map((cell, ci) => (ci === activeCell.c ? e.target.value : cell))
+                    : row
+                );
+                setExcelData(updated);
+              }}
+              className="flex-1 bg-transparent focus:outline-none font-mono text-xs text-slate-800"
+              placeholder="أدخل صيغة أو قيمة..."
+            />
+          </div>
+
+          {/* Interactive Spreadsheet Grid */}
+          <div className="flex-1 overflow-auto bg-slate-50 p-2">
+            <div className="inline-block min-w-full bg-white rounded-lg shadow-xs border border-slate-300 overflow-hidden">
+              <table className="w-full border-collapse text-xs select-none">
+                <thead>
+                  <tr className="bg-slate-200 text-slate-700 text-center font-bold">
+                    <th className="w-8 border border-slate-300 bg-slate-300 text-slate-600 text-[10px]">#</th>
+                    {['A', 'B', 'C', 'D'].map((colName, cIndex) => (
+                      <th key={colName} className="p-1.5 border border-slate-300 text-slate-800 relative min-w-[100px]">
+                        <div className="flex items-center justify-between px-1">
+                          <span>{colName} - {excelData[0]?.[cIndex] || ''}</span>
+                          {isExcelFiltersOn && (
+                            <Filter className="w-2.5 h-2.5 text-slate-500 hover:text-emerald-700 cursor-pointer" />
+                          )}
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {excelData.slice(1).map((row, rowIdx) => {
+                    const actualRowIdx = rowIdx + 1;
+                    const isTotalRow = actualRowIdx === excelData.length - 1;
+                    return (
+                      <tr
+                        key={actualRowIdx}
+                        className={`border-b border-slate-200 hover:bg-slate-50 ${
+                          isTotalRow ? 'bg-emerald-50/70 font-bold border-t-2 border-emerald-500' : ''
+                        }`}
+                      >
+                        <td className="w-8 p-1 text-center bg-slate-100 border-r border-slate-300 text-slate-500 font-mono text-[10px]">
+                          {actualRowIdx + 1}
+                        </td>
+                        {row.map((cellVal, colIdx) => {
+                          const isSelected = activeCell.r === actualRowIdx && activeCell.c === colIdx;
+                          return (
+                            <td
+                              key={colIdx}
+                              onClick={() => setActiveCell({ r: actualRowIdx, c: colIdx })}
+                              className={`p-1.5 border border-slate-200 transition-colors cursor-cell relative ${
+                                isSelected
+                                  ? 'bg-emerald-100/70 ring-2 ring-emerald-600 z-10'
+                                  : ''
+                              }`}
+                            >
+                              <input
+                                type="text"
+                                value={cellVal}
+                                onChange={(e) => {
+                                  const updated = excelData.map((r, ri) =>
+                                    ri === actualRowIdx
+                                      ? r.map((c, ci) => (ci === colIdx ? e.target.value : c))
+                                      : r
+                                  );
+                                  setExcelData(updated);
+                                }}
+                                onFocus={() => setActiveCell({ r: actualRowIdx, c: colIdx })}
+                                className="w-full bg-transparent focus:outline-none text-slate-800 font-medium"
+                                style={{
+                                  fontFamily: settings.fontFamily,
+                                  textAlign: colIdx === 0 ? 'right' : 'center',
+                                }}
+                              />
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Excel Footer Quick Shortcuts Helper */}
+          <div className="px-3 py-1.5 bg-emerald-50 border-t border-emerald-200 flex items-center justify-between text-[11px] text-emerald-900 shrink-0">
+            <div className="flex items-center gap-2 overflow-x-auto">
+              <span className="font-bold flex items-center gap-1">
+                <Table className="w-3.5 h-3.5 text-emerald-700" />
+                <span>ورقة1</span>
+              </span>
+              <span className="text-slate-300">|</span>
+              <span className="text-emerald-700 font-mono">Alt + = (AutoSum)</span>
+              <span className="text-slate-300">|</span>
+              <span className="text-emerald-700 font-mono">Ctrl + Shift + L (فلترة)</span>
+              <span className="text-slate-300">|</span>
+              <span className="text-emerald-700 font-mono">F2 (تحرير الخلية)</span>
+            </div>
+            <span className="text-[10px] text-emerald-700 font-semibold shrink-0">
+              Excel 365 جاهز
+            </span>
           </div>
         </div>
       )}
