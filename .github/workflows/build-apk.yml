@@ -20,11 +20,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: 22
 
       - name: Install Project Dependencies
-        run: npm ci || npm install
+        run: npm install --legacy-peer-deps
 
       - name: Compile Web Application
         run: npm run build
@@ -38,17 +37,15 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install & Initialize Capacitor for Android
+      - name: Sync Capacitor Android
         run: |
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap add android || true
           npx cap sync android
 
       - name: Build Android Debug APK with Gradle
         run: |
           cd android
           chmod +x ./gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --no-daemon
           cd ..
 
       - name: Prepare APK Output
@@ -68,7 +65,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/heads/main')
         with:
-          tag_name: v1.0.0-${{ github.run_number }}
+          tag_name: v1.0.${{ github.run_number }}
           name: "إصدار لوحة مفاتيح سامسونج نوت 10+ (v1.0.${{ github.run_number }})"
           body: |
             ### 📱 حزمة تطبيق لوحة المفاتيح العربية (APK) لهاتف سامسونج نوت 10+
