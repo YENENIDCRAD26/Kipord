@@ -266,7 +266,7 @@ export const ApkBuildModal: React.FC<ApkBuildModalProps> = ({ isOpen, onClose })
                 <span>•</span>
                 <span className="flex items-center gap-1 font-medium">
                   <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                  ارتفاع الكيبورد: 5.5 cm
+                  ارتفاع الكيبورد: 6.3 cm
                 </span>
                 <span>•</span>
                 <span className="font-medium">أيقونة مستقلة وتجربة شاشة كاملة Fullscreen</span>
