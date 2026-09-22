@@ -12,7 +12,8 @@ import {
   Zap,
   Globe,
   HelpCircle,
-  Sparkles
+  Sparkles,
+  GitBranch,
 } from 'lucide-react';
 
 interface ApkBuildModalProps {
@@ -22,7 +23,7 @@ interface ApkBuildModalProps {
 
 export const ApkBuildModal: React.FC<ApkBuildModalProps> = ({ isOpen, onClose }) => {
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<'pwa' | 'apk' | 'cli'>('pwa');
+  const [activeTab, setActiveTab] = useState<'pwa' | 'apk' | 'git' | 'cli'>('pwa');
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [installStatus, setInstallStatus] = useState<'idle' | 'installing' | 'installed'>('idle');
 
@@ -165,6 +166,17 @@ export const ApkBuildModal: React.FC<ApkBuildModalProps> = ({ isOpen, onClose })
           >
             <Download className="w-4 h-4 text-emerald-600" />
             <span>توليد ملف APK (PWABuilder)</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('git')}
+            className={`pb-2.5 px-3 font-semibold text-xs sm:text-sm border-b-2 transition-all flex items-center gap-1.5 ${
+              activeTab === 'git'
+                ? 'border-blue-600 text-blue-700'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <GitBranch className="w-4 h-4 text-indigo-600" />
+            <span>مستودع GitHub والتصدير</span>
           </button>
           <button
             onClick={() => setActiveTab('cli')}
@@ -310,6 +322,68 @@ export const ApkBuildModal: React.FC<ApkBuildModalProps> = ({ isOpen, onClose })
                   <p>1. انقر فوق الزر الأزرق أعلاه لفتح صفحة التوليد.</p>
                   <p>2. اضغط على <strong>"Package For Stores"</strong> ثم اختر <strong>"Android"</strong>.</p>
                   <p>3. اضغط <strong>"Generate Package"</strong> لتحميل ملف الـ APK المباشر لجهازك.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'git' && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl bg-indigo-50/80 border border-indigo-200 flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <GitBranch className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-indigo-950 text-sm">
+                    تصدير ومزامنة الكود مع مستودع GitHub
+                  </h3>
+                  <p className="text-indigo-900 text-xs mt-1 leading-relaxed">
+                    تم إنشاء وحفظ كامل كود لوحة المفاتيح في المستودع المحلي بنجاح (مع commits مسجلة). لرفع الكود إلى مستودعك الخاص <strong>YENENIDCRAD26/Kipord</strong>، اختر إحدى الطريقتين التاليتين:
+                  </p>
+                </div>
+              </div>
+
+              {/* Method 1: Push via Personal Access Token */}
+              <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-[11px]">
+                      1
+                    </span>
+                    <span>الرفع المباشر عبر رمز المصادقة (GitHub Personal Access Token):</span>
+                  </h4>
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  نظراً لأن GitHub يطلب توثيقاً آمناً (Personal Access Token)، يمكنك ربط رمز الوصول الخاص بك وتشغيل الأمر التالي:
+                </p>
+                <div className="p-3 bg-slate-900 text-slate-100 rounded-xl font-mono text-xs overflow-x-auto flex items-center justify-between gap-2" dir="ltr">
+                  <code>git remote set-url origin https://&lt;YOUR_TOKEN&gt;@github.com/YENENIDCRAD26/Kipord.git && git push -u origin main</code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText('git remote set-url origin https://<YOUR_TOKEN>@github.com/YENENIDCRAD26/Kipord.git && git push -u origin main');
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[11px] shrink-0 flex items-center gap-1"
+                  >
+                    {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>نسخ</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Method 2: AI Studio Built-in Export */}
+              <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-2">
+                <h4 className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center text-[11px]">
+                    2
+                  </span>
+                  <span>التصدير السريع التلقائي عبر قائمة Google AI Studio:</span>
+                </h4>
+                <div className="text-xs text-slate-600 space-y-1.5 leading-relaxed">
+                  <p>• اضغط على أيقونة الإعدادات <strong>(Settings / Share)</strong> بأعلى يمين شاشة الاستوديو.</p>
+                  <p>• اختر <strong>"Export to GitHub"</strong> لربط حساب GitHub ومزامنة المستودع بنقرة واحدة دون الحاجة لكتابة كلمات مرور.</p>
+                  <p>• أو اختر <strong>"Download ZIP"</strong> لتحميل الحزمة كاملة على جهازك وفتحها في Android Studio لبناء APK نهائي.</p>
                 </div>
               </div>
             </div>
